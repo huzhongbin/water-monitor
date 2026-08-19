@@ -6,19 +6,32 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu‑latest
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Build ESPHome firmware
-        uses: esphome/actions‑build@main
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          config: weatherstation.yaml
+          python-version: "3.12"
 
-      - name: Upload firmware
-        uses: actions/upload‑artifact@v4
+      - name: Install ESPHome
+        run: |
+          python -m pip install --upgrade pip
+          pip install esphome
+
+      - name: Compile firmware
+        run: esphome compile water-monitor.yaml
+
+      - name: Debug 打印全部固件文件
+        run: |
+          pwd
+          ls -la ./.esphome/build/
+          find ./.esphome/build -name "firmware*.bin"
+
+      - name: Upload firmware artifacts
+        uses: actions/upload-artifact@v4
         with:
-          name: weather‑station‑firmware
-          path: |
-            ./build/*.bin
-            ./build/*.uf2
+          name: water-monitor-firmware
+          path: ./.esphome/build/**/firmware*.bin
