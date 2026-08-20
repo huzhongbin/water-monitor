@@ -229,18 +229,6 @@ sensor:
       unit_of_measurement: L
       accuracy_decimals: 1
 
-  #中转读取pulse_meter总累计，修复 .total 成员不存在编译报错
-  - platform: template
-    id: pure_total_val
-    internal: true
-    lambda: |-
-      return id(pure_flow_rate).get_total();
-  - platform: template
-    id: waste_total_val
-    internal: true
-    lambda: |-
-      return id(waste_flow_rate).get_total();
-
   # 废水比（废水/纯水百分比）
   - platform: template
     name: waste_ratio
@@ -445,8 +433,8 @@ interval:
       - lambda: |-
           id(water_temp).publish_state(id(ntc_raw).state);
 
-          float pure = id(pure_total_val).state;
-          float waste = id(waste_total_val).state;
+          float pure = id(pure_total_1).state;
+          float waste = id(waste_total_1).state;
           float ratio = 0;
           if(pure>0.1) ratio = (waste / pure)*100.0;
           id(waste_ratio).publish_state(ratio);
@@ -462,10 +450,10 @@ interval:
           float cap3 = id(filter3_cap).state;
           float cap4 = id(filter4_cap).state;
 
-          float used1 = id(pure_total_val).state - id(filter1_total).state;
-          float used2 = id(pure_total_val).state - id(filter2_total).state;
-          float used3 = id(pure_total_val).state - id(filter3_total).state;
-          float used4 = id(pure_total_val).state - id(filter4_total).state;
+          float used1 = id(pure_total_1).state - id(filter1_total);
+          float used2 = id(pure_total_1).state - id(filter2_total);
+          float used3 = id(pure_total_1).state - id(filter3_total);
+          float used4 = id(pure_total_1).state - id(filter4_total);
 
           float rem1_1 = cap1-used1;
           float rem2_1 = cap2-used2;
