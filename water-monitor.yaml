@@ -17,6 +17,7 @@ wifi:
     password: "12345678"
 
 ota:
+  platform: esphome
   password: "12345678"
 
 api:
