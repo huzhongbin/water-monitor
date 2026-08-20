@@ -427,50 +427,50 @@ interval:
           id(tds_uart).write_array(cmd,8);
           id(tds_channel_sel) = (id(tds_channel_sel)==1)?2:1;
 
-  # 1秒更新一次：管道温度、废水比、脱盐率、4组滤芯剩余升数&剩余百分比
+   # 1秒更新一次：管道温度、废水比、脱盐率、4组滤芯剩余升数&剩余百分比
   - interval: 1s
-  then:
-    - lambda: |-
-        id(water_temp).publish_state(id(ntc_raw).state);
+    then:
+      - lambda: |-
+          id(water_temp).publish_state(id(ntc_raw).state);
 
-        float pure = id(pure_flow_rate).total;
-        float waste = id(waste_flow_rate).total;
-        float ratio = 0;
-        if(pure>0.1) ratio = (waste / pure)*100.0;
-        id(waste_ratio).publish_state(ratio);
+          float pure = id(pure_flow_rate).total;
+          float waste = id(waste_flow_rate).total;
+          float ratio = 0;
+          if(pure>0.1) ratio = (waste / pure)*100.0;
+          id(waste_ratio).publish_state(ratio);
 
-        float ein = id(ec_in).state;
-        float eout = id(ec_pure).state;
-        float reject = 0;
-        if(ein>5) reject = ((ein - eout)/ein)*100.0;
-        id(ro_rejection).publish_state(reject);
+          float ein = id(ec_in).state;
+          float eout = id(ec_pure).state;
+          float reject = 0;
+          if(ein>5) reject = ((ein - eout)/ein)*100.0;
+          id(ro_rejection).publish_state(reject);
 
-        float cap1 = id(filter1_cap).state;
-        float cap2 = id(filter2_cap).state;
-        float cap3 = id(filter3_cap).state;
-        float cap4 = id(filter4_cap).state;
+          float cap1 = id(filter1_cap).state;
+          float cap2 = id(filter2_cap).state;
+          float cap3 = id(filter3_cap).state;
+          float cap4 = id(filter4_cap).state;
 
-        float used1 = id(pure_flow_rate).total - id(filter1_total).state;
-        float used2 = id(pure_flow_rate).total - id(filter2_total).state;
-        float used3 = id(pure_flow_rate).total - id(filter3_total).state;
-        float used4 = id(pure_flow_rate).total - id(filter4_total).state;
+          float used1 = id(pure_flow_rate).total - id(filter1_total).state;
+          float used2 = id(pure_flow_rate).total - id(filter2_total).state;
+          float used3 = id(pure_flow_rate).total - id(filter3_total).state;
+          float used4 = id(pure_flow_rate).total - id(filter4_total).state;
 
-        float rem1_1 = cap1-used1;
-        float rem2_1 = cap2-used2;
-        float rem3_1 = cap3-used3;
-        float rem4_1 = cap4-used4;
+          float rem1_1 = cap1-used1;
+          float rem2_1 = cap2-used2;
+          float rem3_1 = cap3-used3;
+          float rem4_1 = cap4-used4;
 
-        id(filter1_remain).publish_state(rem1_1 > 0 ? rem1_1 : 0);
-        id(filter2_remain).publish_state(rem2_1 > 0 ? rem2_1 : 0);
-        id(filter3_remain).publish_state(rem3_1 > 0 ? rem3_1 : 0);
-        id(filter4_remain).publish_state(rem4_1 > 0 ? rem4_1 : 0);
+          id(filter1_remain).publish_state(rem1_1 > 0 ? rem1_1 : 0);
+          id(filter2_remain).publish_state(rem2_1 > 0 ? rem2_1 : 0);
+          id(filter3_remain).publish_state(rem3_1 > 0 ? rem3_1 : 0);
+          id(filter4_remain).publish_state(rem4_1 > 0 ? rem4_1 : 0);
 
-        float pct1 = cap1>0 ? 100.0 * rem1_1 / cap1 : 0;
-        float pct2 = cap2>0 ? 100.0 * rem2_1 / cap2 : 0;
-        float pct3 = cap3>0 ? 100.0 * rem3_1 / cap3 : 0;
-        float pct4 = cap4>0 ? 100.0 * rem4_1 / cap4 : 0;
+          float pct1 = cap1>0 ? 100.0 * rem1_1 / cap1 : 0;
+          float pct2 = cap2>0 ? 100.0 * rem2_1 / cap2 : 0;
+          float pct3 = cap3>0 ? 100.0 * rem3_1 / cap3 : 0;
+          float pct4 = cap4>0 ? 100.0 * rem4_1 / cap4 : 0;
 
-        id(filter1_remain_pct).publish_state(pct1>0?pct1:0);
-        id(filter2_remain_pct).publish_state(pct2>0?pct2:0);
-        id(filter3_remain_pct).publish_state(pct3>0?pct3:0);
-        id(filter4_remain_pct).publish_state(pct4>0?pct4:0);
+          id(filter1_remain_pct).publish_state(pct1>0?pct1:0);
+          id(filter2_remain_pct).publish_state(pct2>0?pct2:0);
+          id(filter3_remain_pct).publish_state(pct3>0?pct3:0);
+          id(filter4_remain_pct).publish_state(pct4>0?pct4:0);
