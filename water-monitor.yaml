@@ -32,6 +32,7 @@ uart:
     tx_pin: GPIO10
     rx_pin: GPIO3
     baud_rate: 9600
+    rx_buffer_size: 128
     data_bits: 8
     parity: NONE
     stop_bits: 1
@@ -67,14 +68,14 @@ sensor:
   # 纯水流量计 GPIO4 5160脉冲/L
   - platform: pulse_meter
     pin: GPIO4
-    name: "纯水瞬时流量"
+    name: 纯水瞬时流量
     id: pure_flow_rate
-    unit_of_measurement: "L/min"
+    unit_of_measurement: L/min
     accuracy_decimals: 2
     filters:
       - multiply: 0.0001938
     total:
-      name: "纯水累计"
+      name: 纯水累计
       id: pure_total_l
       unit_of_measurement: "L"
       accuracy_decimals: 1
@@ -82,14 +83,14 @@ sensor:
   # 废水流量计 GPIO5 5160脉冲/L
   - platform: pulse_meter
     pin: GPIO5
-    name: "废水瞬时流量"
+    name: 废水瞬时流量
     id: waste_flow_rate
-    unit_of_measurement: "L/min"
+    unit_of_measurement: L/min
     accuracy_decimals: 2
     filters:
       - multiply: 0.0001938
     total:
-      name: "废水累计"
+      name: 废水累计
       id: waste_total_l
       unit_of_measurement: "L"
       accuracy_decimals: 1
