@@ -10,10 +10,10 @@ esp32:
     type: arduino
 
 wifi:
-  ssid: mijia
+  ssid: Mijia
   password: 09081005
   ap:
-    ssid: Water-Monitor-Fallback
+    ssid: Water-Monitor-AP
     password: "12345678"
 
 ota:
