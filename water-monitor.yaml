@@ -51,27 +51,26 @@ uart:
       after:
         bytes: 11
       sequence:
-  - lambda: |-
-      // bytes 就是收到的11字节TDS应答帧
-      auto &buf = bytes;
-      if(buf.size()>=11 && buf[0]==0x55) {
-        uint8_t ch = buf[3];
-        uint16_t ec_raw = (buf[4] << 8) | buf[5];
-        uint16_t temp_raw = (buf[6] << 8) | buf[7];
-        float ec = ec_raw / 10.0f;
-        float t = temp_raw /10.0f;   // 这行不要漏掉
-        float tds_val = ec / 2.0f;
+        - lambda: |-
+            auto &buf = bytes;
+            if(buf.size()>=11 && buf[0]==0x55) {
+              uint8_t ch = buf[3];
+              uint16_t ec_raw = (buf[4] << 8) | buf[5];
+              uint16_t temp_raw = (buf[6] << 8) | buf[7];
+              float ec = ec_raw / 10.0f;
+              float t = temp_raw /10.0f;
+              float tds_val = ec / 2.0f;
 
-        if(ch == 1){
-          id(ec_in).publish_state(ec);
-          id(tds_in).publish_state(tds_val);
-          id(tds_temp_in).publish_state(t);
-        }else if(ch ==2){
-          id(ec_pure).publish_state(ec);
-          id(tds_pure).publish_state(tds_val);
-          id(tds_temp_pure).publish_state(t);
-        }
-      }
+              if(ch == 1){
+                id(ec_in).publish_state(ec);
+                id(tds_in).publish_state(tds_val);
+                id(tds_temp_in).publish_state(t);
+              }else if(ch ==2){
+                id(ec_pure).publish_state(ec);
+                id(tds_pure).publish_state(tds_val);
+                id(tds_temp_pure).publish_state(t);
+              }
+            }
 
 # 全局断电保存变量（删除tds_buf、tds_buf_idx，数组放lambda static）
 globals:
