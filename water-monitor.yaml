@@ -1,0 +1,473 @@
+esphome:
+  name: water-monitor
+  friendly_name: water-monitor
+  platformio_options:
+    board_build.flash_mode: dio
+
+esp32:
+  board: esp32-c3-devkitm-1
+  framework:
+    type: arduino
+
+wifi:
+  ssid: mijia
+  password: 09081005
+  ap:
+    ssid: Water-Monitor-Fallback
+    password: "12345678"
+
+ota:
+  platform: esphome
+  password: "12345678"
+
+api:
+
+logger:
+  level: INFO
+
+# I2C总线 用于ADS1115模数采集芯片
+i2c:
+  sda: GPIO7
+  scl: GPIO6
+  scan: true
+
+# ADS1115 4通道ADC芯片，采集压力、NTC温度模拟量
+ads1115:
+  address: 0x48
+
+# UART串口：对接双通道TDS电导率水质模块V1.1
+uart:
+  - id: tds_uart
+    tx_pin: GPIO10
+    rx_pin: GPIO3
+    baud_rate: 9600
+    data_bits: 8
+    parity: NONE
+    stop_bits: 1
+    rx_buffer_size: 256
+    debug:
+      direction: RX
+      dummy_receiver: true
+      after:
+        bytes: 11
+      sequence:
+  - lambda: |-
+      // bytes 就是收到的11字节TDS应答帧
+      auto &buf = bytes;
+      if(buf.size()>=11 && buf[0]==0x55) {
+        uint8_t ch = buf[3];
+        uint16_t ec_raw = (buf[4] << 8) | buf[5];
+        uint16_t temp_raw = (buf[6] << 8) | buf[7];
+        float ec = ec_raw / 10.0f;
+        float t = temp_raw /10.0f;   // 这行不要漏掉
+        float tds_val = ec / 2.0f;
+
+        if(ch == 1){
+          id(ec_in).publish_state(ec);
+          id(tds_in).publish_state(tds_val);
+          id(tds_temp_in).publish_state(t);
+        }else if(ch ==2){
+          id(ec_pure).publish_state(ec);
+          id(tds_pure).publish_state(tds_val);
+          id(tds_temp_pure).publish_state(t);
+        }
+      }
+
+# 全局断电保存变量（删除tds_buf、tds_buf_idx，数组放lambda static）
+globals:
+  - id: filter1_total
+    type: float
+    restore_value: yes
+    initial_value: '0.0'
+  - id: filter2_total
+    type: float
+    restore_value: yes
+    initial_value: '0.0'
+  - id: filter3_total
+    type: float
+    restore_value: yes
+    initial_value: '0.0'
+  - id: filter4_total
+    type: float
+    restore_value: yes
+    initial_value: '0.0'
+  - id: high_pressure_start_time
+    type: int
+    restore_value: no
+    initial_value: "0"
+  - id: tds_channel_sel
+    type: uint8_t
+    restore_value: no
+    initial_value: '1'
+
+
+# 网络时间同步，用于高压开关计时
+time:
+  - platform: sntp
+    id: sys_time
+    servers: ntp.aliyun.com
+    timezone: "CST-8"
+
+# 滤芯容量设置，HA前端可修改，断电保存
+number:
+  - platform: template
+    name: filter1_capacity
+    id: filter1_cap
+    optimistic: true
+    initial_value: 6000
+    min_value: 1000
+    max_value: 20000
+    step: 100
+    restore_value: true
+  - platform: template
+    name: filter2_capacity
+    id: filter2_cap
+    optimistic: true
+    initial_value: 6000
+    min_value: 1000
+    max_value: 20000
+    step: 100
+    restore_value: true
+  - platform: template
+    name: filter3_capacity
+    id: filter3_cap
+    optimistic: true
+    initial_value: 12000
+    min_value: 1000
+    max_value: 30000
+    step: 100
+    restore_value: true
+  - platform: template
+    name: filter4_capacity
+    id: filter4_cap
+    optimistic: true
+    initial_value: 8000
+    min_value: 1000
+    max_value: 20000
+    step: 100
+    restore_value: true
+
+# 二进制输入传感器：高压压力开关
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO21
+      mode: INPUT_PULLUP
+      inverted: true
+    name: high_pressure_switch
+    id: high_press_switch
+    device_class: opening
+    on_press:
+      lambda: |-
+        id(high_pressure_start_time) = id(sys_time).now().timestamp;
+    on_release:
+      lambda: |-
+        id(high_pressure_start_time) = 0;
+
+# 虚拟开关：手动清零4组滤芯累计用量，修复新版本this保留关键字报错
+switch:
+  - platform: template
+    name: reset_filter1
+    id: sw_reset_filter1
+    turn_on_action:
+      - lambda: id(filter1_total) = id(pure_total_l).state;
+      - switch.turn_off: sw_reset_filter1
+
+  - platform: template
+    name: reset_filter2
+    id: sw_reset_filter2
+    turn_on_action:
+      - lambda: id(filter2_total) = id(pure_total_l).state;
+      - switch.turn_off: sw_reset_filter2
+
+  - platform: template
+    name: reset_filter3
+    id: sw_reset_filter3
+    turn_on_action:
+      - lambda: id(filter3_total) = id(pure_total_l).state;
+      - switch.turn_off: sw_reset_filter3
+
+  - platform: template
+    name: reset_filter4
+    id: sw_reset_filter4
+    turn_on_action:
+      - lambda: id(filter4_total) = id(pure_total_l).state;
+      - switch.turn_off: sw_reset_filter4
+
+# 全部数值传感器
+sensor:
+  # 纯水流量计：瞬时流量 + 总累计流量（断电保存）
+  - platform: pulse_meter
+    pin: GPIO4
+    name: pure_instant_flow
+    id: pure_flow_rate
+    unit_of_measurement: L/min
+    accuracy_decimals: 2
+    filters:
+      - multiply: 0.0001938
+    total:
+      name: pure_total
+      id: pure_total_l
+      unit_of_measurement: L
+      accuracy_decimals: 1
+
+  # 废水流量计：瞬时流量 + 总累计流量（断电保存）
+  - platform: pulse_meter
+    pin: GPIO5
+    name: waste_instant_flow
+    id: waste_flow_rate
+    unit_of_measurement: L/min
+    accuracy_decimals: 2
+    filters:
+      - multiply: 0.0001938
+    total:
+      name: waste_total
+      id: waste_total_l
+      unit_of_measurement: L
+      accuracy_decimals: 1
+
+  # 废水比（废水/纯水百分比）
+  - platform: template
+    name: waste_ratio
+    id: waste_ratio
+    unit_of_measurement: "%"
+    accuracy_decimals: 1
+
+  # RO膜脱盐率，使用电导率计算
+  - platform: template
+    name: ro_rejection_rate
+    id: ro_rejection
+    unit_of_measurement: "%"
+    accuracy_decimals: 1
+
+  # ADS1115 A0：进水压力传感器
+  - platform: ads1115
+    multiplexer: A0_GND
+    gain: 6.144
+    name: water_pressure
+    id: water_press
+    unit_of_measurement: MPa
+    accuracy_decimals: 3
+    filters:
+      - lambda: |-
+          float voltage = x;
+          float pressure_mpa = (voltage - 0.5) / 4.0 * 1.2;
+          if(pressure_mpa < 0) pressure_mpa = 0;
+          return pressure_mpa;
+
+  # ADS1115 A1：管道NTC热敏电阻原始ADC值（内部隐藏，不对外输出）
+  - platform: ads1115
+    multiplexer: A1_GND
+    gain: 6.144
+    name: ntc_raw_value
+    id: ntc_raw
+    internal: true
+    filters:
+      - lambda: |-
+          float v = x;
+          float r_ntc = (10000.0 * v) / (6.144 - v);
+          float steinhart;
+          steinhart = r_ntc / 10000.0;
+          steinhart = log(steinhart);
+          steinhart /= 3950.0;
+          steinhart += 1.0 / (25 + 273.15);
+          steinhart = 1.0 / steinhart;
+          steinhart -= 273.15;
+          return steinhart;
+
+  # 管道NTC换算后的进水温度
+  - platform: template
+    name: water_inlet_temp
+    id: water_temp
+    unit_of_measurement: "°C"
+    accuracy_decimals: 1
+
+  # 进水侧电导率 uS/cm
+  - platform: template
+    name: ec_in
+    id: ec_in
+    unit_of_measurement: uS/cm
+    accuracy_decimals: 1
+  # 进水TDS，由电导率除以2计算
+  - platform: template
+    name: tds_in
+    id: tds_in
+    unit_of_measurement: ppm
+    accuracy_decimals: 0
+  # 进水TDS探头自带温度
+  - platform: template
+    name: tds_temp_in
+    id: tds_temp_in
+    unit_of_measurement: "°C"
+    accuracy_decimals: 1
+
+  # 纯水侧电导率 uS/cm
+  - platform: template
+    name: ec_pure
+    id: ec_pure
+    unit_of_measurement: uS/cm
+    accuracy_decimals: 1
+  # 纯水TDS，由电导率除以2计算
+  - platform: template
+    name: tds_pure
+    id: tds_pure
+    unit_of_measurement: ppm
+    accuracy_decimals: 0
+  # 纯水TDS探头自带温度
+  - platform: template
+    name: tds_temp_pure
+    id: tds_temp_pure
+    unit_of_measurement: "°C"
+    accuracy_decimals: 1
+
+  # 滤芯1剩余升数
+  - platform: template
+    name: filter1_remain_liter
+    id: filter1_remain
+    unit_of_measurement: L
+    accuracy_decimals: 0
+  # 滤芯2剩余升数
+  - platform: template
+    name: filter2_remain_liter
+    id: filter2_remain
+    unit_of_measurement: L
+    accuracy_decimals: 0
+  # 滤芯3剩余升数
+  - platform: template
+    name: filter3_remain_liter
+    id: filter3_remain
+    unit_of_measurement: L
+    accuracy_decimals: 0
+  # 滤芯4剩余升数
+  - platform: template
+    name: filter4_remain_liter
+    id: filter4_remain
+    unit_of_measurement: L
+    accuracy_decimals: 0
+
+  # 滤芯1剩余百分比
+  - platform: template
+    name: filter1_remain_percent
+    id: filter1_remain_pct
+    unit_of_measurement: "%"
+    accuracy_decimals: 1
+  # 滤芯2剩余百分比
+  - platform: template
+    name: filter2_remain_percent
+    id: filter2_remain_pct
+    unit_of_measurement: "%"
+    accuracy_decimals: 1
+  # 滤芯3剩余百分比
+  - platform: template
+    name: filter3_remain_percent
+    id: filter3_remain_pct
+    unit_of_measurement: "%"
+    accuracy_decimals: 1
+  # 滤芯4剩余百分比
+  - platform: template
+    name: filter4_remain_percent
+    id: filter4_remain_pct
+    unit_of_measurement: "%"
+    accuracy_decimals: 1
+
+  # 高压开关持续闭合计时，单位秒，用于区分水满停机和高压故障
+  - platform: template
+    name: high_pressure_duration_sec
+    id: high_pressure_duration
+    unit_of_measurement: s
+    accuracy_decimals: 0
+    update_interval: 5s
+    lambda: |-
+      if(!id(high_press_switch).state) return 0;
+      int now_ts = id(sys_time).now().timestamp;
+      int start_ts = id(high_pressure_start_time);
+      if(start_ts == 0) return 0;
+      int diff = now_ts - start_ts;
+      return diff > 0 ? diff : 0;
+
+# 文本状态传感器，全部返回英文字符串，HA侧做中文映射，规避编译中文编码报错
+text_sensor:
+  # 高压开关状态文本：normal正常 / water_full_stop水满停机 / high_pressure_fault高压故障
+  - platform: template
+    id: high_pressure_status_text
+    name: high_pressure_status
+    lambda: |-
+      if(!id(high_press_switch).state){
+        return std::string("normal");
+      }
+      int dur = id(high_pressure_duration).state;
+      if(dur < 600){
+        return std::string("water_full_stop");
+      }
+      return std::string("high_pressure_fault");
+
+  # 设备总状态提示：monitor_ok正常监测 / high_pressure_fault告警
+  - platform: template
+    name: dev_status
+    id: dev_status
+    lambda: |-
+      if(id(high_press_switch).state && id(high_pressure_duration).state >= 600){
+        return std::string("high_pressure_fault");
+      }
+      return std::string("monitor_ok");
+
+# 定时循环任务
+interval:
+  # 1000ms轮询TDS模块，交替查询通道1进水、通道2纯水，解析返回帧；数组改为static局部变量，修复github编译数组报错
+  - interval: 1000ms
+    then:
+      - lambda: |-
+          uint8_t cmd[8] = {0x55,0x07,0x05,id(tds_channel_sel),0x00,0x00,0x00,0x00};
+          uint8_t sum=0;
+          for(int i=0;i<7;i++) sum += cmd[i];
+          cmd[7] = sum;
+          id(tds_uart).write_array(cmd,8);
+          id(tds_channel_sel) = (id(tds_channel_sel)==1)?2:1;
+
+  # 1秒更新一次：管道温度、废水比、脱盐率、4组滤芯剩余升数&剩余百分比
+  - interval: 1s
+    then:
+      - lambda: |-
+          id(water_temp).publish_state(id(ntc_raw).state);
+
+          float pure = id(pure_total_l).state;
+          float waste = id(waste_total_l).state;
+          float ratio = 0;
+          if(pure>0.1) ratio = (waste / pure)*100.0;
+          id(waste_ratio).publish_state(ratio);
+
+          float ein = id(ec_in).state;
+          float eout = id(ec_pure).state;
+          float reject = 0;
+          if(ein>5) reject = ((ein - eout)/ein)*100.0;
+          id(ro_rejection).publish_state(reject);
+
+          float used1 = id(pure_total_l).state - id(filter1_total);
+          float used2 = id(pure_total_l).state - id(filter2_total);
+          float used3 = id(pure_total_l).state - id(filter3_total);
+          float used4 = id(pure_total_l).state - id(filter4_total);
+
+          float cap1 = id(filter1_cap).state;
+          float cap2 = id(filter2_cap).state;
+          float cap3 = id(filter3_cap).state;
+          float cap4 = id(filter4_cap).state;
+
+          float rem1_l = cap1-used1;
+          float rem2_l = cap2-used2;
+          float rem3_l = cap3-used3;
+          float rem4_l = cap4-used4;
+
+          id(filter1_remain).publish_state(rem1_l > 0 ? rem1_l : 0);
+          id(filter2_remain).publish_state(rem2_l > 0 ? rem2_l : 0);
+          id(filter3_remain).publish_state(rem3_l > 0 ? rem3_l : 0);
+          id(filter4_remain).publish_state(rem4_l > 0 ? rem4_l : 0);
+
+          float pct1 = cap1>0 ? 100.0 * rem1_l / cap1 : 0;
+          float pct2 = cap2>0 ? 100.0 * rem2_l / cap2 : 0;
+          float pct3 = cap3>0 ? 100.0 * rem3_l / cap3 : 0;
+          float pct4 = cap4>0 ? 100.0 * rem4_l / cap4 : 0;
+
+          id(filter1_remain_pct).publish_state(pct1>0?pct1:0);
+          id(filter2_remain_pct).publish_state(pct2>0?pct2:0);
+          id(filter3_remain_pct).publish_state(pct3>0?pct3:0);
+          id(filter4_remain_pct).publish_state(pct4>0?pct4:0);
