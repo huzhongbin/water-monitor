@@ -24,7 +24,6 @@ api:
 
 web_server:
   port: 80
-  ota: true    #开启网页固件上传按钮
 
 logger:
   level: INFO
