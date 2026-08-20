@@ -27,6 +27,9 @@ i2c:
   scl: GPIO6
   scan: true
 
+ads1115:
+  address: 0x48
+
 uart:
   - id: tds_uart
     tx_pin: GPIO10
@@ -112,7 +115,7 @@ sensor:
   - platform: ads1115
     multiplexer: 'A0_GND'
     gain: 6.144
-    name: "进水压力"
+    name: water_pressure
     id: water_press
     unit_of_measurement: MPa
     accuracy_decimals: 3
@@ -127,7 +130,7 @@ sensor:
   - platform: ads1115
     multiplexer: 'A1_GND'
     gain: 6.144
-    name: "进水温度原始"
+    name: ntc_raw_value
     id: ntc_raw
     internal: true
     filters:
@@ -144,7 +147,7 @@ sensor:
           return steinhart;
 
   - platform: template
-    name: "进水温度"
+    name: water_in_temp
     id: water_temp
     unit_of_measurement: "°C"
     accuracy_decimals: 1
@@ -152,33 +155,33 @@ sensor:
   # TDS两路
   - platform: template
     id: tds1_sensor
-    name: "TDS进水"
+    name: tds_in
     unit_of_measurement: "ppm"
     accuracy_decimals: 0
   - platform: template
     id: tds2_sensor
-    name: "TDS纯水"
+    name: tds_pure
     unit_of_measurement: "ppm"
     accuracy_decimals: 0
 
   # 滤芯剩余升数
   - platform: template
-    name: "滤芯1剩余(L)"
+    name: filter1_remain_l
     id: filter1_remain
     unit_of_measurement: "L"
     accuracy_decimals: 0
   - platform: template
-    name: "滤芯2剩余(L)"
+    name: filter2_remain_l
     id: filter2_remain
     unit_of_measurement: "L"
     accuracy_decimals: 0
   - platform: template
-    name: "滤芯3剩余(L)"
+    name: filter3_remain_l
     id: filter3_remain
     unit_of_measurement: "L"
     accuracy_decimals: 0
   - platform: template
-    name: "滤芯4剩余(L)"
+    name: filter4_remain_l
     id: filter4_remain
     unit_of_measurement: "L"
     accuracy_decimals: 0
@@ -189,28 +192,28 @@ binary_sensor:
     pin:
       number: GPIO21
       mode: INPUT_PULLUP
-    name: "高压开关(水满)"
+    name: high_pressure_switch
     id: high_press_switch
 
 switch:
   # 手动清零滤芯，更换滤芯时点击
   - platform: template
-    name: "清零滤芯1"
+    name: reset_filter1
     turn_on_action:
       - lambda: id(filter1_total) = id(pure_total_l).state;
       - switch.turn_off: this
   - platform: template
-    name: "清零滤芯2"
+    name: reset_filter2
     turn_on_action:
       - lambda: id(filter2_total) = id(pure_total_l).state;
       - switch.turn_off: this
   - platform: template
-    name: "清零滤芯3"
+    name: reset_filter3
     turn_on_action:
       - lambda: id(filter3_total) = id(pure_total_l).state;
       - switch.turn_off: this
   - platform: template
-    name: "清零滤芯4"
+    name: reset_filter4
     turn_on_action:
       - lambda: id(filter4_total) = id(pure_total_l).state;
       - switch.turn_off: this
