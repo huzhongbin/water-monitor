@@ -32,11 +32,10 @@ uart:
     tx_pin: GPIO10
     rx_pin: GPIO3
     baud_rate: 9600
-    rx_buffer_size: 128
     data_bits: 8
     parity: NONE
     stop_bits: 1
-    rx_buffer_size: 24
+    rx_buffer_size: 128
 
 globals:
   - id: tds_buf
