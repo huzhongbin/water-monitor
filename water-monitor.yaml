@@ -200,7 +200,8 @@ sensor:
   - platform: pulse_meter
     pin:
       number: GPIO4
-      mode: INPUT_PULLDOWN
+      mode: INPUT_PULLUP
+    internal_filter: 13us
     name: pure_instant_flow
     id: pure_flow_rate
     unit_of_measurement: L/min
@@ -217,7 +218,8 @@ sensor:
   - platform: pulse_meter
     pin:
       number: GPIO5
-      mode: INPUT_PULLDOWN
+      mode: INPUT_PULLUP
+    internal_filter: 13us
     name: waste_instant_flow
     id: waste_flow_rate
     unit_of_measurement: L/min
