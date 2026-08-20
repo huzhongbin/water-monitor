@@ -148,24 +148,31 @@ binary_sensor:
 switch:
   - platform: template
     name: reset_filter1
+    id: sw_reset_filter1
     turn_on_action:
       - lambda: id(filter1_total) = id(pure_total_l).state;
-      - switch.turn_off: this
+      - switch.turn_off: sw_reset_filter1
+
   - platform: template
     name: reset_filter2
+    id: sw_reset_filter2
     turn_on_action:
       - lambda: id(filter2_total) = id(pure_total_l).state;
-      - switch.turn_off: this
+      - switch.turn_off: sw_reset_filter2
+
   - platform: template
     name: reset_filter3
+    id: sw_reset_filter3
     turn_on_action:
       - lambda: id(filter3_total) = id(pure_total_l).state;
-      - switch.turn_off: this
+      - switch.turn_off: sw_reset_filter3
+
   - platform: template
     name: reset_filter4
+    id: sw_reset_filter4
     turn_on_action:
       - lambda: id(filter4_total) = id(pure_total_l).state;
-      - switch.turn_off: this
+      - switch.turn_off: sw_reset_filter4
 
 # 全部数值传感器
 sensor:
