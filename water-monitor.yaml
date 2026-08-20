@@ -45,6 +45,48 @@ uart:
     parity: NONE
     stop_bits: 1
     rx_buffer_size: 256
+    on_receive:
+      lambda: |-
+        // 把收到字节追加进vector缓存
+        for(size_t i=0;i<data.size();i++){
+          id(tds_rx_vec).push_back(data[i]);
+        }
+        // 限制缓存最大长度，防止爆内存
+        if(id(tds_rx_vec).size()>64){
+          id(tds_rx_vec).erase(id(tds_rx_vec).begin(), id(tds_rx_vec).begin()+32);
+        }
+
+        // 查找帧头0x55
+        auto& buf = id(tds_rx_vec);
+        while(buf.size() >= 11){
+          if(buf[0] != 0x55){
+            buf.erase(buf.begin());
+            continue;
+          }
+          // 完整帧11字节
+          if(buf.size() >=11){
+            uint8_t ch = buf[3];
+            uint16_t ec_raw = (buf[4] << 8) | buf[5];
+            uint16_t temp_raw = (buf[6] << 8) | buf[7];
+            float ec = ec_raw / 10.0f;
+            float t = temp_raw /10.0f;
+            float tds_val = ec / 2.0f;
+
+            if(ch == 1){
+              id(ec_in).publish_state(ec);
+              id(tds_in).publish_state(tds_val);
+              id(tds_temp_in).publish_state(t);
+            }else if(ch ==2){
+              id(ec_pure).publish_state(ec);
+              id(tds_pure).publish_state(tds_val);
+              id(tds_temp_pure).publish_state(t);
+            }
+            // 解析完，丢弃这一帧11字节
+            buf.erase(buf.begin(), buf.begin()+11);
+          }else{
+            break;
+          }
+        }
 
 # 全局断电保存变量（删除tds_buf、tds_buf_idx，数组放lambda static）
 globals:
@@ -72,6 +114,11 @@ globals:
     type: uint8_t
     restore_value: no
     initial_value: '1'
+  # 新增：串口接收缓存，C++ vector，新版esphome安全
+  - id: tds_rx_vec
+    type: std::vector<uint8_t>
+    restore_value: no
+    initial_value: '{}'
 
 # 网络时间同步，用于高压开关计时
 time:
@@ -389,46 +436,11 @@ interval:
   - interval: 1000ms
     then:
       - lambda: |-
-          static uint8_t tds_buf[24] = {0};
-          static int tds_buf_idx = 0;
-
           uint8_t cmd[8] = {0x55,0x07,0x05,id(tds_channel_sel),0x00,0x00,0x00,0x00};
           uint8_t sum=0;
           for(int i=0;i<7;i++) sum += cmd[i];
           cmd[7] = sum;
           id(tds_uart).write_array(cmd,8);
-
-          while(id(tds_uart).available()){
-            uint8_t b = id(tds_uart).read();
-            if(b == 0x55){
-              tds_buf_idx=0;
-            }
-            if(tds_buf_idx < 11){
-              tds_buf[tds_buf_idx] = b;
-              tds_buf_idx++;
-            }
-            if(tds_buf_idx>=11){
-              if(tds_buf[2] == 0x85){
-                uint8_t ch = tds_buf[3];
-                uint16_t ec_raw = (tds_buf[4] << 8) | tds_buf[5];
-                uint16_t temp_raw = (tds_buf[6] << 8) | tds_buf[7];
-                float ec = ec_raw / 10.0f;
-                float t = temp_raw /10.0f;
-                float tds_val = ec / 2.0f;
-
-                if(ch == 1){
-                  id(ec_in).publish_state(ec);
-                  id(tds_in).publish_state(tds_val);
-                  id(tds_temp_in).publish_state(t);
-                }else if(ch ==2){
-                  id(ec_pure).publish_state(ec);
-                  id(tds_pure).publish_state(tds_val);
-                  id(tds_temp_pure).publish_state(t);
-                }
-              }
-              tds_buf_idx=0;
-            }
-          }
           id(tds_channel_sel) = (id(tds_channel_sel)==1)?2:1;
 
   # 1秒更新一次：管道温度、废水比、脱盐率、4组滤芯剩余升数&剩余百分比
