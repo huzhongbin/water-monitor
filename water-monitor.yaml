@@ -67,7 +67,7 @@ sensor:
   # 纯水流量计 GPIO4 5160脉冲/L
   - platform: pulse_meter
     pin: GPIO4
-    name: 纯水瞬时流量
+    name: pure_instant_flow
     id: pure_flow_rate
     unit_of_measurement: L/min
     accuracy_decimals: 2
@@ -82,7 +82,7 @@ sensor:
   # 废水流量计 GPIO5 5160脉冲/L
   - platform: pulse_meter
     pin: GPIO5
-    name: 废水瞬时流量
+    name: waste_instant_flow
     id: waste_flow_rate
     unit_of_measurement: L/min
     accuracy_decimals: 2
