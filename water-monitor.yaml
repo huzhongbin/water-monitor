@@ -172,25 +172,25 @@ switch:
     name: reset_filter1
     id: sw_reset_filter1
     turn_on_action:
-      - lambda: id(filter1_total) = id(pure_flow_rate).total;
+      - lambda: id(filter1_total) = id(pure_total_1).state;
       - switch.turn_off: sw_reset_filter1
   - platform: template
     name: reset_filter2
     id: sw_reset_filter2
     turn_on_action:
-      - lambda: id(filter2_total) = id(pure_flow_rate).total;
+      - lambda: id(filter2_total) = id(pure_total_1).state;
       - switch.turn_off: sw_reset_filter2
   - platform: template
     name: reset_filter3
     id: sw_reset_filter3
     turn_on_action:
-      - lambda: id(filter3_total) = id(pure_flow_rate).total;
+      - lambda: id(filter3_total) = id(pure_total_1).state;
       - switch.turn_off: sw_reset_filter3
   - platform: template
     name: reset_filter4
     id: sw_reset_filter4
     turn_on_action:
-      - lambda: id(filter4_total) = id(pure_flow_rate).total;
+      - lambda: id(filter4_total) = id(pure_total_1).state;
       - switch.turn_off: sw_reset_filter4
 
 # 全部数值传感器
@@ -228,6 +228,18 @@ sensor:
       id: waste_total_1
       unit_of_measurement: L
       accuracy_decimals: 1
+
+  #中转读取pulse_meter总累计，修复 .total 成员不存在编译报错
+  - platform: template
+    id: pure_total_val
+    internal: true
+    lambda: |-
+      return id(pure_flow_rate).get_total();
+  - platform: template
+    id: waste_total_val
+    internal: true
+    lambda: |-
+      return id(waste_flow_rate).get_total();
 
   # 废水比（废水/纯水百分比）
   - platform: template
@@ -433,8 +445,8 @@ interval:
       - lambda: |-
           id(water_temp).publish_state(id(ntc_raw).state);
 
-          float pure = id(pure_flow_rate).total;
-          float waste = id(waste_flow_rate).total;
+          float pure = id(pure_total_val).state;
+          float waste = id(waste_total_val).state;
           float ratio = 0;
           if(pure>0.1) ratio = (waste / pure)*100.0;
           id(waste_ratio).publish_state(ratio);
@@ -450,10 +462,10 @@ interval:
           float cap3 = id(filter3_cap).state;
           float cap4 = id(filter4_cap).state;
 
-          float used1 = id(pure_flow_rate).total - id(filter1_total).state;
-          float used2 = id(pure_flow_rate).total - id(filter2_total).state;
-          float used3 = id(pure_flow_rate).total - id(filter3_total).state;
-          float used4 = id(pure_flow_rate).total - id(filter4_total).state;
+          float used1 = id(pure_total_val).state - id(filter1_total).state;
+          float used2 = id(pure_total_val).state - id(filter2_total).state;
+          float used3 = id(pure_total_val).state - id(filter3_total).state;
+          float used4 = id(pure_total_val).state - id(filter4_total).state;
 
           float rem1_1 = cap1-used1;
           float rem2_1 = cap2-used2;
