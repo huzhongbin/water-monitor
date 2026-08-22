@@ -266,31 +266,30 @@ sensor:
           if(pressure_mpa > 1.0) pressure_mpa =1.0;
           return pressure_mpa;
 
-  # ADS1115 A1：管道NTC热敏电阻原始ADC值，10K‑B3380
-  - platform: ads1115
-    multiplexer: A1_GND
-    gain: 4.096
-    name: ntc_raw_value
-    id: ntc_raw
-    internal: true
-    filters:
-      - lambda: |-
-          float v = x;
-          // 分压：10K上拉电阻，NTC下拉
-          float r_ntc;
-          if(v >= 4.094) r_ntc = 1000000;
-          else if(v <=0.01) r_ntc = 0.1;
-          else r_ntc = (10000.0 * v) / (4.096 - v);
+  # ADS1115  A1：管道NTC热敏电阻原始ADC值，压力传感器内置NTC QN0603X103F3380FB
+- platform: ads1115
+  multiplexer: A1_GND
+  gain: 4.096
+  name: ntc_raw_value
+  id: ntc_raw
+  internal: true
+  filters:
+    - lambda: |-
+        float adc_voltage = x;
+        // 压力传感器内部自带3380000Ω下拉电阻，R25=10K，B=3380
+        const float R_internal = 3380000.0F;
+        const float R25 = 10000.0F;
+        const float B = 3380.0F;
 
-          const float B = 3380.0F;
-          const float R25 = 10000.0F;
-          float steinhart;
-          steinhart = log(r_ntc / R25);
-          steinhart /= B;
-          steinhart += 1.0 / (25.0 + 273.15F);
-          steinhart = 1.0F / steinhart;
-          steinhart -= 273.15F;
-          return steinhart;
+        float r_ntc = R_internal * adc_voltage / (4.096F - adc_voltage);
+
+        float steinhart;
+        steinhart = log(r_ntc / R25);
+        steinhart /= B;
+        steinhart += 1.0F / (25.0F + 273.15F);
+        steinhart = 1.0F / steinhart;
+        steinhart -= 273.15F;
+        return steinhart;
 
   # 管道NTC换算后的进水温度
   - platform: template
@@ -408,7 +407,8 @@ text_sensor:
     id: high_pressure_status_text
     name: "高压状态‑24"
     lambda: |-
-      if(!id(high_press_switch).state){
+      // !id(high_press_switch).state → 开关断开(水满停机)
+      if(id(high_press_switch).state){
         return std::string("正常运行");
       }
       int dur = id(high_pressure_duration).state;
