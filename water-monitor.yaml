@@ -115,7 +115,7 @@ time:
 # 滤芯容量设置，HA前端可修改，断电保存
 number:
   - platform: template
-    name: "滤芯1总容量"
+    name: "滤芯1总容量01"
     id: filter1_cap
     optimistic: true
     initial_value: 6000
@@ -124,7 +124,7 @@ number:
     step: 100
     restore_value: true
   - platform: template
-    name: "滤芯2总容量"
+    name: "滤芯2总容量02"
     id: filter2_cap
     optimistic: true
     initial_value: 6000
@@ -133,7 +133,7 @@ number:
     step: 100
     restore_value: true
   - platform: template
-    name: "滤芯3总容量"
+    name: "滤芯3总容量03"
     id: filter3_cap
     optimistic: true
     initial_value: 12000
@@ -142,7 +142,7 @@ number:
     step: 100
     restore_value: true
   - platform: template
-    name: "滤芯4总容量"
+    name: "滤芯4总容量04"
     id: filter4_cap
     optimistic: true
     initial_value: 8000
@@ -158,7 +158,7 @@ binary_sensor:
       number: GPIO21
       mode: INPUT_PULLUP
       inverted: true
-    name: "高压开关"
+    name: "高压开关01"
     id: high_press_switch
     device_class: opening
     on_press:
@@ -171,25 +171,25 @@ binary_sensor:
 # 虚拟开关：手动清零4组滤芯累计用量
 switch:
   - platform: template
-    name: "重置滤芯1"
+    name: "重置滤芯1‑01"
     id: sw_reset_filter1
     turn_on_action:
       - lambda: id(filter1_total) = id(pure_total_1).state;
       - switch.turn_off: sw_reset_filter1
   - platform: template
-    name: "重置滤芯2"
+    name: "重置滤芯2‑02"
     id: sw_reset_filter2
     turn_on_action:
       - lambda: id(filter2_total) = id(pure_total_1).state;
       - switch.turn_off: sw_reset_filter2
   - platform: template
-    name: "重置滤芯3"
+    name: "重置滤芯3‑03"
     id: sw_reset_filter3
     turn_on_action:
       - lambda: id(filter3_total) = id(pure_total_1).state;
       - switch.turn_off: sw_reset_filter3
   - platform: template
-    name: "重置滤芯4"
+    name: "重置滤芯4‑04"
     id: sw_reset_filter4
     turn_on_action:
       - lambda: id(filter4_total) = id(pure_total_1).state;
@@ -203,14 +203,14 @@ sensor:
       number: GPIO4
       mode: INPUT_PULLUP
     internal_filter: 13us
-    name: "纯水瞬时流量"
+    name: "纯水瞬时流量‑01"
     id: pure_flow_rate
     unit_of_measurement: L/min
     accuracy_decimals: 2
     filters:
       - multiply: 0.0001938
     total:
-      name: "纯水总流量"
+      name: "纯水总流量‑02"
       id: pure_total_1
       unit_of_measurement: L
       accuracy_decimals: 1
@@ -221,28 +221,28 @@ sensor:
       number: GPIO5
       mode: INPUT_PULLUP
     internal_filter: 13us
-    name: "废水瞬时流量"
+    name: "废水瞬时流量‑03"
     id: waste_flow_rate
     unit_of_measurement: L/min
     accuracy_decimals: 2
     filters:
       - multiply: 0.0001938
     total:
-      name: "废水总流量"
+      name: "废水总流量‑04"
       id: waste_total_1
       unit_of_measurement: L
       accuracy_decimals: 1
 
   # 废水比（废水/纯水百分比）
   - platform: template
-    name: "废水比"
+    name: "废水比‑05"
     id: waste_ratio
     unit_of_measurement: "%"
     accuracy_decimals: 1
 
   # RO膜脱盐率，使用电导率计算
   - platform: template
-    name: "RO脱盐率"
+    name: "RO脱盐率‑06"
     id: ro_rejection
     unit_of_measurement: "%"
     accuracy_decimals: 1
@@ -251,7 +251,7 @@ sensor:
   - platform: ads1115
     multiplexer: A0_GND
     gain: 6.144
-    name: "进水压力"
+    name: "进水压力‑07"
     id: water_press
     unit_of_measurement: MPa
     accuracy_decimals: 3
@@ -284,102 +284,102 @@ sensor:
 
   # 管道NTC换算后的进水温度
   - platform: template
-    name: "进水温度"
+    name: "进水温度‑08"
     id: water_temp
     unit_of_measurement: "°C"
     accuracy_decimals: 1
 
   # 进水侧电导率 uS/cm
   - platform: template
-    name: "进水电导率"
+    name: "进水电导率‑09"
     id: ec_in
     unit_of_measurement: uS/cm
     accuracy_decimals: 1
   # 进水TDS，由电导率除以2计算
   - platform: template
-    name: "进水TDS"
+    name: "进水TDS‑10"
     id: tds_in
     unit_of_measurement: ppm
     accuracy_decimals: 0
   # 进水TDS探头自带温度
   - platform: template
-    name: "进水TDS温度"
+    name: "进水TDS温度‑11"
     id: tds_temp_in
     unit_of_measurement: "°C"
     accuracy_decimals: 1
 
   # 纯水侧电导率 uS/cm
   - platform: template
-    name: "纯水电导率"
+    name: "纯水电导率‑12"
     id: ec_pure
     unit_of_measurement: uS/cm
     accuracy_decimals: 1
   # 纯水TDS，由电导率除以2计算
   - platform: template
-    name: "纯水TDS"
+    name: "纯水TDS‑13"
     id: tds_pure
     unit_of_measurement: ppm
     accuracy_decimals: 0
   # 纯水TDS探头自带温度
   - platform: template
-    name: "纯水TDS温度"
+    name: "纯水TDS温度‑14"
     id: tds_temp_pure
     unit_of_measurement: "°C"
     accuracy_decimals: 1
 
   # 滤芯1剩余升数
   - platform: template
-    name: "滤芯1剩余升数"
+    name: "滤芯1剩余升数‑15"
     id: filter1_remain
     unit_of_measurement: L
     accuracy_decimals: 0
   # 滤芯2剩余升数
   - platform: template
-    name: "滤芯2剩余升数"
+    name: "滤芯2剩余升数‑16"
     id: filter2_remain
     unit_of_measurement: L
     accuracy_decimals: 0
   # 滤芯3剩余升数
   - platform: template
-    name: "滤芯3剩余升数"
+    name: "滤芯3剩余升数‑17"
     id: filter3_remain
     unit_of_measurement: L
     accuracy_decimals: 0
   # 滤芯4剩余升数
   - platform: template
-    name: "滤芯4剩余升数"
+    name: "滤芯4剩余升数‑18"
     id: filter4_remain
     unit_of_measurement: L
     accuracy_decimals: 0
 
   # 滤芯1剩余百分比
   - platform: template
-    name: "滤芯1剩余百分比"
+    name: "滤芯1剩余百分比‑19"
     id: filter1_remain_pct
     unit_of_measurement: "%"
     accuracy_decimals: 1
   # 滤芯2剩余百分比
   - platform: template
-    name: "滤芯2剩余百分比"
+    name: "滤芯2剩余百分比‑20"
     id: filter2_remain_pct
     unit_of_measurement: "%"
     accuracy_decimals: 1
   # 滤芯3剩余百分比
   - platform: template
-    name: "滤芯3剩余百分比"
+    name: "滤芯3剩余百分比‑21"
     id: filter3_remain_pct
     unit_of_measurement: "%"
     accuracy_decimals: 1
   # 滤芯4剩余百分比
   - platform: template
-    name: "滤芯4剩余百分比"
+    name: "滤芯4剩余百分比‑22"
     id: filter4_remain_pct
     unit_of_measurement: "%"
     accuracy_decimals: 1
 
   # 高压开关持续闭合计时，单位秒，用于区分水满停机和高压故障
   - platform: template
-    name: "高压持续时间"
+    name: "高压持续时间‑23"
     id: high_pressure_duration
     unit_of_measurement: s
     accuracy_decimals: 0
@@ -396,7 +396,7 @@ sensor:
 text_sensor:
   - platform: template
     id: high_pressure_status_text
-    name: "高压状态"
+    name: "高压状态‑24"
     lambda: |-
       if(!id(high_press_switch).state){
         return std::string("normal");
@@ -408,7 +408,7 @@ text_sensor:
       return std::string("high_pressure_fault");
 
   - platform: template
-    name: "设备状态"
+    name: "设备状态‑25"
     id: dev_status
     lambda: |-
       if(id(high_press_switch).state && id(high_pressure_duration).state >= 600){
