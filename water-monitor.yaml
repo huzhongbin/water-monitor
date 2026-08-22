@@ -247,10 +247,10 @@ sensor:
     unit_of_measurement: "%"
     accuracy_decimals: 1
 
-  # ADS1115 A0：进水压力传感器
+  # ADS1115 A0：进水压力传感器 0‑1MPa，公式 Vout=4*P+0.5
   - platform: ads1115
     multiplexer: A0_GND
-    gain: 6.144
+    gain: 4.096
     name: "进水压力‑07"
     id: water_press
     unit_of_measurement: MPa
@@ -258,28 +258,36 @@ sensor:
     filters:
       - lambda: |-
           float voltage = x;
-          float pressure_mpa = (voltage - 0.5) / 4.0 * 1.2;
+          // Vout = 4*P +0.5 → P = (Vout‑0.5)/4
+          float pressure_mpa = (voltage - 0.5) / 4.0;
           if(pressure_mpa < 0) pressure_mpa = 0;
+          if(pressure_mpa > 1.0) pressure_mpa =1.0;
           return pressure_mpa;
 
-  # ADS1115 A1：管道NTC热敏电阻原始ADC值（内部隐藏，不对外输出）
+  # ADS1115 A1：管道NTC热敏电阻原始ADC值，10K‑B3380
   - platform: ads1115
     multiplexer: A1_GND
-    gain: 6.144
+    gain: 4.096
     name: ntc_raw_value
     id: ntc_raw
     internal: true
     filters:
       - lambda: |-
           float v = x;
-          float r_ntc = (10000.0 * v) / (6.144 - v);
+          // 分压：10K上拉电阻，NTC下拉
+          float r_ntc;
+          if(v >= 4.094) r_ntc = 1000000;
+          else if(v <=0.01) r_ntc = 0.1;
+          else r_ntc = (10000.0 * v) / (4.096 - v);
+
+          const float B = 3380.0F;
+          const float R25 = 10000.0F;
           float steinhart;
-          steinhart = r_ntc / 10000.0;
-          steinhart = log(steinhart);
-          steinhart /= 3950.0;
-          steinhart += 1.0 / (25 + 273.15);
-          steinhart = 1.0 / steinhart;
-          steinhart -= 273.15;
+          steinhart = log(r_ntc / R25);
+          steinhart /= B;
+          steinhart += 1.0 / (25.0 + 273.15F);
+          steinhart = 1.0F / steinhart;
+          steinhart -= 273.15F;
           return steinhart;
 
   # 管道NTC换算后的进水温度
@@ -392,29 +400,29 @@ sensor:
       int diff = now_ts - start_ts;
       return diff > 0 ? diff : 0;
 
-# 文本状态传感器
+# 文本状态传感器（改成中文）
 text_sensor:
   - platform: template
     id: high_pressure_status_text
     name: "高压状态‑24"
     lambda: |-
       if(!id(high_press_switch).state){
-        return std::string("normal");
+        return std::string("正常运行");
       }
       int dur = id(high_pressure_duration).state;
       if(dur < 600){
-        return std::string("water_full_stop");
+        return std::string("水满停机");
       }
-      return std::string("high_pressure_fault");
+      return std::string("高压故障");
 
   - platform: template
     name: "设备状态‑25"
     id: dev_status
     lambda: |-
       if(id(high_press_switch).state && id(high_pressure_duration).state >= 600){
-        return std::string("high_pressure_fault");
+        return std::string("高压故障");
       }
-      return std::string("monitor_ok");
+      return std::string("监测正常");
 
 # 定时循环任务
 interval:
