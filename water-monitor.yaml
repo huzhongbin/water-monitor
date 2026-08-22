@@ -268,28 +268,28 @@ sensor:
 
   # ADS1115  A1：管道NTC热敏电阻原始ADC值，压力传感器内置NTC QN0603X103F3380FB
   - platform: ads1115
-  multiplexer: A1_GND
-  gain: 4.096
-  name: ntc_raw_value
-  id: ntc_raw
-  internal: true
-  filters:
-    - lambda: |-
-        float adc_voltage = x;
-        // 压力传感器内部自带3380000Ω下拉电阻，R25=10K，B=3380
-        const float R_internal = 3380000.0F;
-        const float R25 = 10000.0F;
-        const float B = 3380.0F;
+    multiplexer: A1_GND
+    gain: 4.096
+    name: ntc_raw_value
+    id: ntc_raw
+    internal: true
+    filters:
+      - lambda: |-
+          float adc_voltage = x;
+          // 压力传感器内部自带3380000Ω下拉电阻，R25=10K，B=3380
+          const float R_internal = 3380000.0F;
+          const float R25 = 10000.0F;
+          const float B = 3380.0F;
 
-        float r_ntc = R_internal * adc_voltage / (4.096F - adc_voltage);
+          float r_ntc = R_internal * adc_voltage / (4.096F - adc_voltage);
 
-        float steinhart;
-        steinhart = log(r_ntc / R25);
-        steinhart /= B;
-        steinhart += 1.0F / (25.0F + 273.15F);
-        steinhart = 1.0F / steinhart;
-        steinhart -= 273.15F;
-        return steinhart;
+          float steinhart;
+          steinhart = log(r_ntc / R25);
+          steinhart /= B;
+          steinhart += 1.0F / (25.0F + 273.15F);
+          steinhart = 1.0F / steinhart;
+          steinhart -= 273.15F;
+          return steinhart;
 
   # 管道NTC换算后的进水温度
   - platform: template
