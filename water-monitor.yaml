@@ -197,7 +197,7 @@ switch:
 
 # 全部数值传感器
 sensor:
-  #纯水流量计：瞬时流量 + 总累计流量（断电保存）
+  # 纯水流量计：瞬时流量 + 总累计流量（断电保存）
   - platform: pulse_meter
     pin:
       number: GPIO4
@@ -208,6 +208,7 @@ sensor:
     unit_of_measurement: L/min
     accuracy_decimals: 2
     filters:
+      # 修正：1脉冲=0.0001938L，pulse_meter会自动完成L→L/min的换算
       - multiply: 0.0001938
     total:
       name: "纯水总流量‑02"
@@ -215,7 +216,7 @@ sensor:
       unit_of_measurement: L
       accuracy_decimals: 1
 
-  #废水流量计：瞬时流量 + 总累计流量（断电保存）
+  # 废水流量计：瞬时流量 + 总累计流量（断电保存）
   - platform: pulse_meter
     pin:
       number: GPIO5
@@ -226,6 +227,7 @@ sensor:
     unit_of_measurement: L/min
     accuracy_decimals: 2
     filters:
+      # 废水流量计和纯水流量计参数一致，用相同的系数
       - multiply: 0.0001938
     total:
       name: "废水总流量‑04"
