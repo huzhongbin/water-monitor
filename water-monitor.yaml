@@ -267,7 +267,7 @@ sensor:
           return pressure_mpa;
 
   # ADS1115  A1：管道NTC热敏电阻原始ADC值，压力传感器内置NTC QN0603X103F3380FB
-- platform: ads1115
+  - platform: ads1115
   multiplexer: A1_GND
   gain: 4.096
   name: ntc_raw_value
